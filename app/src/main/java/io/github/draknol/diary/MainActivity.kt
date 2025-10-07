@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.background
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
@@ -25,8 +27,13 @@ import io.github.draknol.diary.ui.theme.DiaryTheme
  * @author Reuben Russell - 23004666
  */
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Create view model
+        val viewModel: DiaryViewModel by viewModels { DiaryViewModelFactory(context = application) }
+
         enableEdgeToEdge()
         setContent {
             DiaryTheme {
@@ -96,7 +103,8 @@ class MainActivity : ComponentActivity() {
                         exitTransition = { ExitTransition.None },
                     ) {
                         composable(route = "home") {
-                            EntryList(state = entryListState)
+                            val entries = viewModel.getAllDesc().collectAsState(initial = emptyList()).value
+                            EntryList(state = entryListState, entries = entries)
                         }
                         composable(route = "routine") {
                             /* TODO */

@@ -206,17 +206,18 @@ fun TabIconToggleButton(id: Int, contentDescription: String, checked: Boolean, o
 /**
  * Lazy vertical grid of diary entries.
  * @param state The state of the grid.
+ * @param entries The list of entries to display.
  */
 @Composable
-fun EntryList(state: LazyGridState) {
+fun EntryList(state: LazyGridState, entries: List<Entry>) {
     LazyVerticalGrid(
         modifier = Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer),
         columns = GridCells.Fixed(count = 1),
         state = state
     ) {
-        val date = LocalDate.of(2025, 1, 1)
-        items(count = 365) { index ->
-            Entry(date = date.plusDays(index.toLong() * 20), title = "Journal Entry $index")
+        items(count = entries.size) { index ->
+            val entry = entries[index]
+            Entry(date = LocalDate.parse(entry.date), title = entry.title)
         }
     }
 }
