@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -17,27 +19,47 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import java.time.LocalDate
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 
 /**
@@ -78,10 +100,12 @@ fun TitleBar(title: String, id: Int, contentDescription: String, onClick: () -> 
 
 /**
  * Floating action button for adding a new entry.
+ * @param text The text to display on the button.
+ * @param id The resource ID of the icon.
  * @param onClick The action to be performed when the button is clicked.
  */
 @Composable
-fun AddButton(onClick: () -> Unit) {
+fun ActionButton(text: String, id: Int, contentDescription: String, onClick: () -> Unit) {
     ExtendedFloatingActionButton(
         onClick = onClick,
         shape = RoundedCornerShape(size = 24.dp),
@@ -93,13 +117,13 @@ fun AddButton(onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                painter = painterResource(id = R.drawable.add),
-                contentDescription = "add",
+                painter = painterResource(id = id),
+                contentDescription = contentDescription,
                 modifier = Modifier.size(size = 28.dp),
                 tint = MaterialTheme.colorScheme.onPrimaryContainer
             )
             Text(
-                text = "Add",
+                text = text,
                 fontSize = 20.sp
             )
         }
@@ -217,7 +241,7 @@ fun EntryList(state: LazyGridState, entries: List<Entry>) {
     ) {
         items(count = entries.size) { index ->
             val entry = entries[index]
-            Entry(date = LocalDate.parse(entry.date), title = entry.title)
+            Entry(date = entry.date, title = entry.title)
         }
     }
 }
@@ -229,7 +253,7 @@ fun EntryList(state: LazyGridState, entries: List<Entry>) {
  * @param title The title of the entry.
  */
 @Composable
-fun Entry(date: LocalDate, title: String) {
+fun Entry(date: String, title: String) {
     Column(
         modifier = Modifier
             .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -248,9 +272,52 @@ fun Entry(date: LocalDate, title: String) {
         )
         Text(
             modifier = Modifier.padding(top = 4.dp, start = 4.dp),
-            text = date.toString(),
+            text = date,
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 10.sp,
+        )
+    }
+}
+
+
+/**
+ * Text box for writing in.
+ * Doesn't scroll correctly when keyboard comes up but it is a know issue
+ * https://issuetracker.google.com/issues/237190748
+ * Gmail has the same issue.
+ * @param text The text state to use.
+ * @param placeholder The placeholder text.
+ * @param singleLine Whether the text box should be single line.
+ */
+@Composable
+fun TextBox(text: MutableState<String>, placeholder: String, singleLine: Boolean = false) {
+
+    val bottomPadding = with(receiver = LocalDensity.current) {
+        max(a = WindowInsets.ime.getBottom(density = LocalDensity.current).toDp(), b = 80.dp)
+    }
+
+    Card(
+        modifier = if (singleLine) {
+            Modifier.padding(bottom = 16.dp).fillMaxWidth()
+        } else {
+            Modifier.padding(bottom = bottomPadding).fillMaxSize()
+        },
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
+    ) {
+        TextField(
+            value = text.value,
+            onValueChange = { text.value = it },
+            placeholder = { Text(text = placeholder, color = Color.Gray) },
+            singleLine = singleLine,
+            modifier = if (singleLine) {
+                Modifier.fillMaxWidth()
+            } else {
+                Modifier.fillMaxSize()
+            },
+            colors = TextFieldDefaults.colors(
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent
+            ),
         )
     }
 }

@@ -21,4 +21,5 @@ class DiaryViewModel(context: Context): ViewModel() {
 
     fun getAllDesc() = mDao.getAllDesc()
     fun getAllAsc() = mDao.getAllAsc()
+    fun insert(entry: Entry) = mDao.insert(entry = entry)
 }

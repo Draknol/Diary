@@ -8,6 +8,7 @@ import androidx.activity.viewModels
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -15,13 +16,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import io.github.draknol.diary.ui.theme.DiaryTheme
-
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 /**
  * @author Reuben Russell - 23004666
@@ -33,6 +40,8 @@ class MainActivity : ComponentActivity() {
 
         // Create view model
         val viewModel: DiaryViewModel by viewModels { DiaryViewModelFactory(context = application) }
+
+        var wipEntry: Entry? = null
 
         enableEdgeToEdge()
         setContent {
@@ -65,6 +74,7 @@ class MainActivity : ComponentActivity() {
                                 id = R.drawable.back,
                                 contentDescription = "back",
                                 onClick = {
+                                    wipEntry = null
                                     navController.navigate(route = "home") {
                                         popUpTo(route = "home") { inclusive = false }
                                         launchSingleTop = true
@@ -81,10 +91,32 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     floatingActionButton = {
-                        if (currentRoute == "home") {
-                            AddButton(
+                        when (currentRoute) {
+                            "home" -> ActionButton(
+                                text = "Add",
+                                id = R.drawable.add,
+                                contentDescription = "add",
                                 onClick = {
                                     navController.navigate(route = "add") {
+                                        launchSingleTop = true
+                                    }
+                                }
+                            )
+                            "add" -> ActionButton(
+                                text = "Save",
+                                id = R.drawable.save,
+                                contentDescription = "save",
+                                onClick = {
+                                    wipEntry?.let {
+                                        if (it.title.isEmpty()) it.title = "no title"
+                                        if (it.content.isEmpty()) it.content = "entry is empty"
+                                        CoroutineScope(context = Dispatchers.IO).launch {
+                                            viewModel.insert(entry = it)
+                                        }
+                                    }
+                                    wipEntry = null
+                                    navController.navigate(route = "home") {
+                                        popUpTo(route = "home") { inclusive = false }
                                         launchSingleTop = true
                                     }
                                 }
@@ -110,7 +142,28 @@ class MainActivity : ComponentActivity() {
                             /* TODO */
                         }
                         composable(route = "add") {
-                            /* TODO */
+                            Column (
+                                modifier = Modifier
+                                    .padding(all = 8.dp)
+
+                            ) {
+                                val title = rememberSaveable { mutableStateOf("") }
+                                TextBox(
+                                    text = title,
+                                    placeholder = "Title",
+                                    singleLine = true
+                                )
+
+                                val content = rememberSaveable { mutableStateOf(value = "") }
+                                TextBox(
+                                    text = content,
+                                    placeholder = "dear diary...",
+                                )
+
+                                val date = LocalDate.now().toString()
+
+                                wipEntry = Entry(title = title.value, content = content.value, date = date)
+                            }
                         }
                     }
                 }

@@ -21,17 +21,17 @@ import java.time.LocalDate
 @Serializable
 data class Entry(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val title: String,
-    val content: String,
+    var title: String,
+    var content: String,
     val date: String
 )
 
 @Dao
 interface DiaryDao {
-    @Query(value = "SELECT * FROM Entry ORDER BY date DESC")
+    @Query(value = "SELECT * FROM Entry ORDER BY id DESC")
     fun getAllDesc(): Flow<List<Entry>>
 
-    @Query(value = "SELECT * FROM Entry ORDER BY date ASC")
+    @Query(value = "SELECT * FROM Entry ORDER BY id ASC")
     fun getAllAsc(): Flow<List<Entry>>
 
     @Insert
