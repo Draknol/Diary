@@ -1,7 +1,6 @@
 package io.github.draknol.diary
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,8 +41,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
@@ -59,7 +58,7 @@ import androidx.navigation.NavController
  * @param contentDescription The description of the navigationIcon.
  * @param onClick The action to be performed when the navigationIcon is clicked.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(markerClass = [ExperimentalMaterial3Api::class])
 @Composable
 fun TitleBar(title: String, id: Int, contentDescription: String, onClick: () -> Unit) {
     TopAppBar(
@@ -90,10 +89,12 @@ fun TitleBar(title: String, id: Int, contentDescription: String, onClick: () -> 
  * Floating action button for adding a new entry.
  * @param text The text to display on the button.
  * @param id The resource ID of the icon.
+ * @param contentDescription The description of the icon.
+ * @param width The width of the button.
  * @param onClick The action to be performed when the button is clicked.
  */
 @Composable
-fun ActionButton(text: String, id: Int, contentDescription: String, onClick: () -> Unit) {
+fun ActionButton(text: String, id: Int, contentDescription: String, width: Dp, onClick: () -> Unit) {
     ExtendedFloatingActionButton(
         onClick = onClick,
         shape = RoundedCornerShape(size = 24.dp),
@@ -101,7 +102,7 @@ fun ActionButton(text: String, id: Int, contentDescription: String, onClick: () 
         elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp)
     ) {
         Row (
-            modifier = Modifier.width(width = 72.dp),
+            modifier = Modifier.width(width = width),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -120,177 +121,71 @@ fun ActionButton(text: String, id: Int, contentDescription: String, onClick: () 
 
 
 /**
- * Bottom app bar for the main page of the app.
- * Displays two tabs: "Home" and "Routine".
+ * Bottom app bar for the app.
  * @param navController The navigation controller.
  * @param currentPage The current page (0 for "home", 1 for "routine").
+ * @param id1 The resource ID of the first icon.
+ * @param contentDescription1 The description of the first icon.
+ * @param destination1 The destination to navigate to when the first icon is clicked.
+ * @param id2 The resource ID of the second icon.
+ * @param contentDescription2 The description of the second icon.
+ * @param destination2 The destination to navigate to when the second icon is clicked.
  */
 @Composable
-fun MainTabBar(navController: NavController, currentPage: Int) {
-    TablessBar()
-    BottomAppBar(
-        modifier = Modifier
-            .navigationBarsPadding()
-            .height(height = 48.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        content = {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TabIconToggleButton(
-                    id = R.drawable.home,
-                    contentDescription = "home",
-                    checked = currentPage == 0,
-                    onClick = {
-                        if (currentPage != 0) {
-                            navController.navigate(route = "home") {
-                                popUpTo(route = "home") { inclusive = false }
-                                launchSingleTop = true
-                            }
-                        }
-                    }
-                )
-                TabIconToggleButton(
-                    id = R.drawable.routine,
-                    contentDescription = "routine",
-                    checked = currentPage == 1,
-                    onClick = {
-                        if (currentPage != 1) {
-                            navController.navigate(route = "routine") {
-                                popUpTo(route = "home") { inclusive = false }
-                                launchSingleTop = true
-                            }
-                        }
-                    }
-                )
-            }
-        }
-    )
-}
-
-
-/**
- * Bottom app bar for the new entry page of the app.
- * Displays two tabs: "Add" and "Add Image".
- * @param navController The navigation controller.
- * @param currentPage The current page (0 for "add", 1 for "add_image").
- */
-@Composable
-fun AddTabBar(navController: NavController, currentPage: Int) {
-    TablessBar()
-    BottomAppBar(
-        modifier = Modifier
-            .navigationBarsPadding()
-            .height(height = 48.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        content = {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TabIconToggleButton(
-                    id = R.drawable.add,
-                    contentDescription = "add",
-                    checked = currentPage == 0,
-                    onClick = {
-                        if (currentPage != 0) {
-                            navController.navigate(route = "add") {
-                                popUpTo(route = "add") { inclusive = false }
-                                launchSingleTop = true
-                            }
-                        }
-                    }
-                )
-                TabIconToggleButton(
-                    id = R.drawable.add_image,
-                    contentDescription = "add image",
-                    checked = currentPage == 1,
-                    onClick = {
-                        if (currentPage != 1) {
-                            navController.navigate(route = "add_image") {
-                                popUpTo(route = "add") { inclusive = false }
-                                launchSingleTop = true
-                            }
-                        }
-                    }
-                )
-            }
-        }
-    )
-}
-
-
-/**
- * Bottom app bar for the view entry page of the app.
- * Displays two tabs: "View" and "Image".
- * @param navController The navigation controller.
- * @param currentPage The current page (0 for "view", 1 for "view_image").
- */
-@Composable
-fun ViewTabBar(navController: NavController, currentPage: Int) {
-    TablessBar()
-    BottomAppBar(
-        modifier = Modifier
-            .navigationBarsPadding()
-            .height(height = 48.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        content = {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TabIconToggleButton(
-                    id = R.drawable.text,
-                    contentDescription = "text",
-                    checked = currentPage == 0,
-                    onClick = {
-                        if (currentPage != 0) {
-                            navController.navigate(route = "view") {
-                                popUpTo(route = "view") { inclusive = false }
-                                launchSingleTop = true
-                            }
-                        }
-                    }
-                )
-                TabIconToggleButton(
-                    id = R.drawable.image,
-                    contentDescription = "view image",
-                    checked = currentPage == 1,
-                    onClick = {
-                        if (currentPage != 1) {
-                            navController.navigate(route = "view_image") {
-                                popUpTo(route = "view") { inclusive = false }
-                                launchSingleTop = true
-                            }
-                        }
-                    }
-                )
-            }
-        }
-    )
-}
-
-
-/**
- * Blank bottom app bar with no tabs.
- */
-@Composable
-fun TablessBar() {
+fun TabBar(
+    navController: NavController, currentPage: Int,
+    id1: Int, contentDescription1: String, destination1: String,
+    id2: Int, contentDescription2: String, destination2: String
+) {
     // Get height of navigation bar
     val navHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-
     Box(
         modifier = Modifier
             .background(color = MaterialTheme.colorScheme.surfaceContainerHigh)
-            .fillMaxWidth()
-            .height(height = navHeight + 48.dp)
+           .fillMaxWidth()
+           .height(height = navHeight + 48.dp)
+    )
+
+    BottomAppBar(
+        modifier = Modifier
+            .navigationBarsPadding()
+            .height(height = 48.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        content = {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TabIconToggleButton(
+                    id = id1,
+                    contentDescription = contentDescription1,
+                    checked = currentPage == 0,
+                    onClick = {
+                        if (currentPage != 0) {
+                            navController.navigate(route = destination1) {
+                                popUpTo(route = destination1) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+                )
+                TabIconToggleButton(
+                    id = id2,
+                    contentDescription = contentDescription2,
+                    checked = currentPage == 1,
+                    onClick = {
+                        if (currentPage != 1) {
+                            navController.navigate(route = destination2) {
+                                popUpTo(route = destination1) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+                )
+            }
+        }
     )
 }
 
@@ -348,29 +243,29 @@ fun EntryList(state: LazyGridState, entries: List<Entry>, onClick: (id: Long) ->
  */
 @Composable
 fun Entry(entry: Entry, onClick: (id: Long) -> Unit) {
-    Column(
-        modifier = Modifier
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-            .background(
-                color = MaterialTheme.colorScheme.background,
-                shape = RoundedCornerShape(size = 8.dp)
-            )
-            .padding(top = 16.dp, bottom = 8.dp, start = 16.dp, end = 16.dp)
-            .clickable(onClick = { onClick(entry.id) })
+    Surface (
+        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+        color = MaterialTheme.colorScheme.background,
+        shape = RoundedCornerShape(size = 8.dp),
+        onClick = { onClick(entry.id) }
     ) {
-        Text(
-            text = entry.title,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 20.sp,
-            overflow = TextOverflow.Ellipsis,
-            maxLines = 1
-        )
-        Text(
-            modifier = Modifier.padding(top = 4.dp, start = 4.dp),
-            text = entry.date,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 10.sp,
-        )
+        Column (
+            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp, start = 16.dp, end = 16.dp)
+        ) {
+            Text(
+                text = entry.title.ifEmpty { "no title" },
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 20.sp,
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 1
+            )
+            Text(
+                modifier = Modifier.padding(top = 4.dp, start = 4.dp),
+                text = entry.date,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 10.sp,
+            )
+        }
     }
 }
 
@@ -380,13 +275,18 @@ fun Entry(entry: Entry, onClick: (id: Long) -> Unit) {
  * Doesn't scroll correctly when keyboard comes up but it is a know issue
  * https://issuetracker.google.com/issues/237190748
  * Gmail has the same issue.
- * @param text The text state to use.
+ * @param text The text to use.
+ * @param onValueChange The action to be performed when the text changes.
  * @param placeholder The placeholder text.
  * @param singleLine Whether the text box should be single line.
  */
 @Composable
-fun TextBox(text: MutableState<String>, placeholder: String, singleLine: Boolean) {
-
+fun TextBox(
+    text: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    singleLine: Boolean
+) {
     val bottomPadding = if (singleLine) 16.dp
     else with(receiver = LocalDensity.current) {
         max(a = WindowInsets.ime.getBottom(density = LocalDensity.current).toDp(), b = 80.dp)
@@ -394,44 +294,14 @@ fun TextBox(text: MutableState<String>, placeholder: String, singleLine: Boolean
 
     Card(modifier = Modifier.padding(bottom = bottomPadding)) {
         TextField(
-            value = text.value,
-            onValueChange = { text.value = it },
+            value = text,
+            onValueChange = onValueChange,
             placeholder = { Text(text = placeholder, color = Color.Gray) },
             singleLine = singleLine,
             modifier = if (singleLine) Modifier.fillMaxWidth() else Modifier.fillMaxSize(),
             colors = TextFieldDefaults.colors(
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent
-            )
-        )
-    }
-}
-
-/**
- * Text box for reading only.
- * @param text The text to use.
- */
-@Composable
-fun TextBox(text: String, textStyle: TextStyle, singleLine: Boolean) {
-    Card(
-        modifier = if (singleLine) {
-            Modifier.padding(bottom = 16.dp).fillMaxWidth()
-        } else {
-            Modifier.padding(bottom = 80.dp).fillMaxSize()
-        }
-    ) {
-        TextField(
-            value = text,
-            readOnly = true,
-            onValueChange = {},
-            textStyle = textStyle,
-            maxLines = if (singleLine) 2 else Int.MAX_VALUE,
-            modifier = if (singleLine) Modifier.fillMaxWidth() else Modifier.fillMaxSize(),
-            colors = TextFieldDefaults.colors(
-                unfocusedIndicatorColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedContainerColor = MaterialTheme.colorScheme.background,
-                focusedContainerColor = MaterialTheme.colorScheme.background
             )
         )
     }

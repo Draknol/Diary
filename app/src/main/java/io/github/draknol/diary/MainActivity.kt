@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -23,9 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -41,20 +38,22 @@ import java.time.LocalDate
  * @author Reuben Russell - 23004666
  */
 class MainActivity : ComponentActivity() {
-
-    private val viewModel: DiaryViewModel by viewModels { DiaryViewModelFactory(context = application) }
-    private lateinit var navController: NavHostController
-    private var wipEntry: Entry? = null
-    private var selectedEntry: Entry? = null
+    private val viewModel: DiaryViewModel by viewModels {
+        DiaryViewModelFactory(context = application)
+    }
 
 
+    /**
+     * Called when the activity is starting.
+     * Sets the content of the activity to the DiaryTheme.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             DiaryTheme {
                 // Navigation controller for the app
-                navController = rememberNavController()
+                val navController = rememberNavController()
                 val currentBackStack by navController.currentBackStackEntryAsState()
                 val currentRoute = currentBackStack?.destination?.route
 
@@ -62,11 +61,11 @@ class MainActivity : ComponentActivity() {
                 val entryListState = rememberLazyGridState()
 
                 Scaffold(
-                    topBar = topBar(currentRoute),
-                    bottomBar = bottomBar(currentRoute),
-                    floatingActionButton = floatingActionButton(currentRoute)
+                    topBar = topBar(navController, currentRoute),
+                    bottomBar = bottomBar(navController, currentRoute),
+                    floatingActionButton = floatingActionButton(navController, currentRoute)
                 ) { innerPadding ->
-                    DiaryNavHost(innerPadding = innerPadding, entryListState = entryListState)
+                    DiaryNavHost(navController, innerPadding, entryListState)
                 }
             }
         }
@@ -75,11 +74,16 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Navigation host for the app.
+     * @param navController The navigation controller.
      * @param innerPadding The padding values for the inner content.
      * @param entryListState The remembered state of the EntryList.
      */
     @Composable
-    fun DiaryNavHost(innerPadding: PaddingValues, entryListState: LazyGridState) {
+    fun DiaryNavHost(
+        navController: NavHostController,
+        innerPadding: PaddingValues,
+        entryListState: LazyGridState
+    ) {
         NavHost(
             modifier = Modifier
                 .padding(paddingValues = innerPadding)
@@ -90,42 +94,66 @@ class MainActivity : ComponentActivity() {
             enterTransition = { EnterTransition.None },
             exitTransition = { ExitTransition.None },
         ) {
+            // Home page with a list of viewable entries
             composable(route = "home") {
                 val entries = viewModel.getAllDesc().collectAsState(initial = emptyList()).value
-                EntryList(state = entryListState, entries = entries, onClick = {
-                    selectedEntry = entries.find { entry -> entry.id == it }
-                    navController.navigate(route = "view")
+                EntryList(state = entryListState, entries = entries, onClick = { id ->
+                    entries.find { entry -> entry.id == id }?.let { entry ->
+                        viewModel.selectedEntry.value = entry
+                        navController.navigate(route = "view")
+                    }
                 })
             }
+
+            // Routine page, set time for reminder
             composable(route = "routine") {
                 /* TODO */
             }
+
+            // Add page, allows the user to add a new entry
             composable(route = "add") {
                 Column (modifier = Modifier.padding(all = 8.dp)) {
-                    val title = rememberSaveable { mutableStateOf("") }
-                    TextBox(text = title, placeholder = "Title", singleLine = true)
+                    TextBox(
+                        text = viewModel.selectedEntry.value.title,
+                        onValueChange = { viewModel.selectedEntry.value = viewModel.selectedEntry.value.copy(title = it) },
+                        placeholder = "Title",
+                        singleLine = true
+                    )
 
-                    val content = rememberSaveable { mutableStateOf(value = "") }
-                    TextBox(text = content, placeholder = "dear diary...", singleLine = false)
-
-                    val date = LocalDate.now().toString()
-                    wipEntry = Entry(title = title.value, content = content.value, date = date)
+                    TextBox(
+                        text = viewModel.selectedEntry.value.content,
+                        onValueChange = { viewModel.selectedEntry.value = viewModel.selectedEntry.value.copy(content = it) },
+                        placeholder = "dear diary...",
+                        singleLine = false
+                    )
                 }
             }
+
+            // Add image page, allows the user to add an image
             composable(route = "add_image") {
                 /* TODO */
             }
+
+            // View page, allows the user to view and edit an entry
             composable(route = "view") {
                 Column (modifier = Modifier.padding(all = 8.dp)) {
-                    val title = selectedEntry?.title ?: "no title"
-                    val titleStyle = LocalTextStyle.current.copy(fontSize = 24.sp, lineHeight = 24.sp, textAlign = TextAlign.Center)
-                    TextBox(text = title, textStyle = titleStyle, singleLine = true)
+                    TextBox(
+                        text = viewModel.selectedEntry.value.title,
+                        onValueChange = { viewModel.selectedEntry.value = viewModel.selectedEntry.value.copy(title = it) },
+                        placeholder = "Title",
+                        singleLine = true
+                    )
 
-                    val content = selectedEntry?.content ?: "no entry"
-                    val contentStyle = LocalTextStyle.current
-                    TextBox(text = content, textStyle = contentStyle, singleLine = false)
+                    TextBox(
+                        text = viewModel.selectedEntry.value.content,
+                        onValueChange = { viewModel.selectedEntry.value = viewModel.selectedEntry.value.copy(content = it) },
+                        placeholder = "dear diary...",
+                        singleLine = false
+                    )
                 }
             }
+
+            // View image page, allows the user to view and swap an image
             composable(route = "view_image") {
                 /* TODO */
             }
@@ -135,11 +163,16 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Top app bar based on current route.
+     * @param navController The navigation controller.
      * @param currentRoute The current route.
      */
     @Composable
-    fun topBar(currentRoute: String?): @Composable () -> Unit = {
+    fun topBar(
+        navController: NavHostController,
+        currentRoute: String?
+    ): @Composable () -> Unit = {
         when (currentRoute) {
+            // Topbar with title
             "home" -> TitleBar(
                 title = "Diary",
                 id = R.drawable.menu,
@@ -152,12 +185,13 @@ class MainActivity : ComponentActivity() {
                 contentDescription = "menu",
                 onClick = { /* TODO */ }
             )
+
+            // Topbar with title and back button
             "add" -> TitleBar(
                 title = "New Entry",
                 id = R.drawable.back,
                 contentDescription = "back",
                 onClick = {
-                    wipEntry = null
                     navController.navigate(route = "home") {
                         popUpTo(route = "home") { inclusive = false }
                         launchSingleTop = true
@@ -169,19 +203,19 @@ class MainActivity : ComponentActivity() {
                 id = R.drawable.back,
                 contentDescription = "back",
                 onClick = {
-                    wipEntry = null
                     navController.navigate(route = "home") {
                         popUpTo(route = "home") { inclusive = false }
                         launchSingleTop = true
                     }
                 }
             )
+
+            // Topbar with date and back button
             "view", "view_image" -> TitleBar(
-                title = selectedEntry?.date ?: "Entry",
+                title = viewModel.selectedEntry.value.date,
                 id = R.drawable.back,
                 contentDescription = "back",
                 onClick = {
-                    selectedEntry = null
                     navController.navigate(route = "home") {
                         popUpTo(route = "home") { inclusive = false }
                         launchSingleTop = true
@@ -194,62 +228,111 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Bottom app bar based on current route.
+     * @param navController The navigation controller.
      * @param currentRoute The current route.
      */
     @Composable
-    fun bottomBar(currentRoute: String?): @Composable () -> Unit = {
+    fun bottomBar(navController: NavHostController, currentRoute: String?): @Composable () -> Unit = {
         when (currentRoute) {
-            "home" -> MainTabBar(navController, currentPage = 0)
-            "routine" -> MainTabBar(navController, currentPage = 1)
-            "add" -> AddTabBar(navController, currentPage = 0)
-            "add_image" -> AddTabBar(navController, currentPage = 1)
-            "view" -> ViewTabBar(navController, currentPage = 0)
-            "view_image" -> ViewTabBar(navController, currentPage = 1)
-            else -> TablessBar()
+            "home" -> TabBar(
+                navController = navController, currentPage = 0,
+                id1 = R.drawable.home, contentDescription1 = "home", destination1 = "home",
+                id2 = R.drawable.routine, contentDescription2 = "routine", destination2 = "routine"
+            )
+            "routine" -> TabBar(
+                navController = navController, currentPage = 1,
+                id1 = R.drawable.home, contentDescription1 = "home", destination1 = "home",
+                id2 = R.drawable.routine, contentDescription2 = "routine", destination2 = "routine"
+            )
+            "add" -> TabBar(
+                navController = navController, currentPage = 0,
+                id1 = R.drawable.text, contentDescription1 = "text", destination1 = "add",
+                id2 = R.drawable.image, contentDescription2 = "image", destination2 = "add_image"
+            )
+            "add_image" -> TabBar(
+                navController = navController, currentPage = 1,
+                id1 = R.drawable.text, contentDescription1 = "text", destination1 = "add",
+                id2 = R.drawable.image, contentDescription2 = "image", destination2 = "add_image"
+            )
+            "view" -> TabBar(
+                navController = navController, currentPage = 0,
+                id1 = R.drawable.text, contentDescription1 = "text", destination1 = "view",
+                id2 = R.drawable.image, contentDescription2 = "image", destination2 = "view_image"
+            )
+            "view_image" -> TabBar(
+                navController = navController, currentPage = 1,
+                id1 = R.drawable.text, contentDescription1 = "text", destination1 = "view",
+                id2 = R.drawable.image, contentDescription2 = "image", destination2 = "view_image"
+            )
         }
     }
 
 
     /**
      * Floating action button based on current route.
+     * @param navController The navigation controller.
      * @param currentRoute The current route.
      */
     @Composable
-    fun floatingActionButton(currentRoute: String?): @Composable () -> Unit = {
+    fun floatingActionButton(
+        navController: NavHostController,
+        currentRoute: String?
+    ): @Composable () -> Unit = {
         when (currentRoute) {
+            // Floating action button for adding a new entry
             "home" -> ActionButton(
                 text = "Add",
                 id = R.drawable.add,
                 contentDescription = "add",
+                width  = 72.dp,
                 onClick = {
+                    viewModel.selectedEntry.value = Entry(
+                        title = "",
+                        content = "",
+                        date = LocalDate.now().toString()
+                    )
                     navController.navigate(route = "add") {
                         launchSingleTop = true
                     }
                 }
             )
-            "add", "add_image" -> ActionButton(
+
+            // Floating action button for saving new entry
+            "add" -> ActionButton(
                 text = "Save",
                 id = R.drawable.save,
                 contentDescription = "save",
+                width  = 72.dp,
                 onClick = {
-                    wipEntry?.let {
-                        if (it.title.isEmpty()) it.title = "no title"
-                        if (it.content.isEmpty()) it.content = "entry is empty"
-                        CoroutineScope(context = Dispatchers.IO).launch {
-                            viewModel.insert(entry = it)
-                        }
-                    }
-                    wipEntry = null
+                    viewModel.insert(entry = viewModel.selectedEntry.value)
                     navController.navigate(route = "home") {
                         popUpTo(route = "home") { inclusive = false }
                         launchSingleTop = true
                     }
                 }
             )
-            "view", "view_image" -> ActionButton(
-                text = "Edit",
-                id = R.drawable.edit,
-                contentDescription = "edit",
+
+            // Floating action button for saving edited entry
+            "view" -> ActionButton(
+                text = "Save",
+                id = R.drawable.save,
+                contentDescription = "save",
+                width  = 72.dp,
+                onClick = {
+                    viewModel.update(entry = viewModel.selectedEntry.value)
+                    navController.navigate(route = "home") {
+                        popUpTo(route = "home") { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+            )
+
+            // Floating action button for adding an image
+            "add_image", "view_image" -> ActionButton(
+                text = "Attach",
+                id = R.drawable.attach,
+                contentDescription = "attach",
+                width = 90.dp,
                 onClick = {
                     /*TODO*/
                 }

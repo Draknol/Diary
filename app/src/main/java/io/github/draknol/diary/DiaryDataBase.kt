@@ -9,6 +9,7 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.Update
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,14 +32,11 @@ interface DiaryDao {
     @Query(value = "SELECT * FROM Entry ORDER BY id DESC")
     fun getAllDesc(): Flow<List<Entry>>
 
-    @Query(value = "SELECT * FROM Entry ORDER BY id ASC")
-    fun getAllAsc(): Flow<List<Entry>>
-
     @Insert
     fun insert(entry: Entry): Long
 
-    @Query(value = "DELETE FROM Entry")
-    fun deleteAllEntries()
+    @Update
+    fun update(entry: Entry)
 }
 
 @Database(entities = [Entry::class], version = 1)
@@ -50,7 +48,6 @@ abstract class DiaryDataBase : RoomDatabase() {
                 super.onCreate(db)
                 CoroutineScope(context = Dispatchers.IO).launch {
                     val dao: DiaryDao = Instance!!.DiaryDao()
-                    dao.deleteAllEntries()
                     dao.insert(Entry(
                         title = "Stuff I did the day before yesterday",
                         content = "I did stuff",
