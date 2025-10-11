@@ -175,15 +175,13 @@ class MainActivity : ComponentActivity() {
             // Topbar with title
             "home" -> TitleBar(
                 title = "Diary",
-                id = R.drawable.menu,
-                contentDescription = "menu",
-                onClick = { /* TODO */ }
+                id = R.drawable.ic_launcher_foreground,
+                contentDescription = "logo"
             )
             "routine" -> TitleBar(
                 title = "Reminders",
-                id = R.drawable.menu,
-                contentDescription = "menu",
-                onClick = { /* TODO */ }
+                id = R.drawable.ic_launcher_foreground,
+                contentDescription = "logo"
             )
 
             // Topbar with title and back button

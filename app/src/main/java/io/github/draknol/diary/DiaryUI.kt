@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Card
@@ -50,9 +51,7 @@ import androidx.navigation.NavController
 
 
 /**
- * Top app bar for the main page of the app.
- * Displays title `"Diary"`
- * Also has a non-functioning menu icon.
+ * Top app bar with a navigation icon.
  * @param title The title of the page.
  * @param id The resource ID of the navigationIcon.
  * @param contentDescription The description of the navigationIcon.
@@ -76,6 +75,38 @@ fun TitleBar(title: String, id: Int, contentDescription: String, onClick: () -> 
                     modifier = Modifier.padding(6.dp).size(36.dp)
                 )
             }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+    )
+}
+
+
+/**
+ * Top app bar without a navigation icon.
+ * @param title The title of the page.
+ * @param id The resource ID of the Icon.
+ * @param contentDescription The description of the Icon.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TitleBar(title: String, id: Int, contentDescription: String) {
+    TopAppBar(
+        title = {
+            Text(
+                text = title,
+                fontSize = 32.sp
+            )
+        },
+        navigationIcon = {
+            Icon(
+                painter = painterResource(id),
+                contentDescription = contentDescription,
+                modifier = Modifier.padding(start = 6.dp).size(size = 48.dp),
+                tint = Color(color = 0xFF0072eb)
+            )
         },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
