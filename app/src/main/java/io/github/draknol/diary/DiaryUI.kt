@@ -1,5 +1,6 @@
 package io.github.draknol.diary
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,10 +20,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -36,10 +37,10 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
 
 
 /**
@@ -72,7 +74,7 @@ fun TitleBar(title: String, id: Int, contentDescription: String, onClick: () -> 
                 Icon(
                     painter = painterResource(id),
                     contentDescription = contentDescription,
-                    modifier = Modifier.padding(6.dp).size(36.dp)
+                    modifier = Modifier.padding(all = 6.dp).size(size = 36.dp)
                 )
             }
         },
@@ -335,5 +337,46 @@ fun TextBox(
                 unfocusedIndicatorColor = Color.Transparent
             )
         )
+    }
+}
+
+
+/**
+ * Displays and image (or message if no image is selected) on a card.
+ * @param imageUri The URI of the image (`null` for no image).
+ */
+@Composable
+fun ImageBox(
+    imageUri: String?
+) {
+    val bottomPadding = 80.dp
+
+    Card(
+        modifier = Modifier
+            .padding(all = 8.dp)
+            .padding(bottom = bottomPadding),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.background
+        )
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            if (imageUri != null) {
+                val painter = rememberAsyncImagePainter(
+                    model = imageUri
+                )
+
+                Image(
+                    painter = painter,
+                    contentDescription = "entry image",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Text(text = "No image selected", color = Color.Gray)
+            }
+        }
     }
 }

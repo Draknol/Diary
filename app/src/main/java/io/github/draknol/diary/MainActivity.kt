@@ -1,9 +1,14 @@
 package io.github.draknol.diary
 
+import android.Manifest
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -20,7 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -29,9 +34,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import io.github.draknol.diary.ui.theme.DiaryTheme
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 /**
@@ -40,6 +42,33 @@ import java.time.LocalDate
 class MainActivity : ComponentActivity() {
     private val viewModel: DiaryViewModel by viewModels {
         DiaryViewModelFactory(context = application)
+    }
+
+    // Storage permissions
+    private var hasPermission by mutableStateOf(value = false)
+    private val storagePermissionLauncher = registerForActivityResult(contract = ActivityResultContracts.RequestPermission()) { isGranted ->
+        hasPermission = isGranted
+        handlePermissionResult(isGranted)
+    }
+
+    private val imagePickerLauncher = registerForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val imageUri: Uri? = result.data?.data
+            if (imageUri != null) {
+                viewModel.selectedEntry.value = viewModel.selectedEntry.value.copy(imageUri = imageUri.toString())
+            }
+        }
+    }
+
+    fun handlePermissionResult(isGranted: Boolean) {
+        if (isGranted) {
+            val intent = Intent(Intent.ACTION_PICK).apply {
+                type = "image/*"
+            }
+            imagePickerLauncher.launch(input = intent)
+        }
     }
 
 
@@ -131,7 +160,7 @@ class MainActivity : ComponentActivity() {
 
             // Add image page, allows the user to add an image
             composable(route = "add_image") {
-                /* TODO */
+                ImageBox(imageUri = viewModel.selectedEntry.value.imageUri)
             }
 
             // View page, allows the user to view and edit an entry
@@ -155,9 +184,21 @@ class MainActivity : ComponentActivity() {
 
             // View image page, allows the user to view and swap an image
             composable(route = "view_image") {
-                /* TODO */
+                ImageBox(imageUri = viewModel.selectedEntry.value.imageUri)
             }
         }
+    }
+
+    @Composable
+    fun BitMapImage(
+        id: Int,
+        width: Float,
+        useAspect: Boolean,
+        viewModel: DiaryViewModel,
+        modifier: Modifier,
+        forceFullSize: Boolean
+    ) {
+        TODO("Not yet implemented")
     }
 
 
@@ -332,7 +373,12 @@ class MainActivity : ComponentActivity() {
                 contentDescription = "attach",
                 width = 90.dp,
                 onClick = {
-                    /*TODO*/
+                    val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        Manifest.permission.READ_MEDIA_IMAGES
+                    } else {
+                        Manifest.permission.READ_EXTERNAL_STORAGE
+                    }
+                    storagePermissionLauncher.launch(input = permission)
                 }
             )
         }

@@ -24,7 +24,8 @@ data class Entry(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     var title: String,
     var content: String,
-    val date: String
+    val date: String,
+    var imageUri: String? = null
 )
 
 @Dao
@@ -39,7 +40,7 @@ interface DiaryDao {
     fun update(entry: Entry)
 }
 
-@Database(entities = [Entry::class], version = 1)
+@Database(entities = [Entry::class], version = 2)
 abstract class DiaryDataBase : RoomDatabase() {
     abstract fun DiaryDao(): DiaryDao
     companion object {
