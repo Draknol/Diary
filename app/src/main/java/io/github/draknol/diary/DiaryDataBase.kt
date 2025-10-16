@@ -25,7 +25,7 @@ data class Entry(
     var title: String,
     var content: String,
     val date: String,
-    var imageUri: String? = null
+    var imagePath: String? = null
 )
 
 @Dao
@@ -40,7 +40,7 @@ interface DiaryDao {
     fun update(entry: Entry)
 }
 
-@Database(entities = [Entry::class], version = 2)
+@Database(entities = [Entry::class], version = 3)
 abstract class DiaryDataBase : RoomDatabase() {
     abstract fun DiaryDao(): DiaryDao
     companion object {

@@ -2,6 +2,7 @@ package io.github.draknol.diary
 
 import android.Manifest
 import android.content.Intent
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -28,12 +29,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.drawable.toBitmap
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import coil.ImageLoader
+import coil.request.ImageRequest
+import coil.request.SuccessResult
 import io.github.draknol.diary.ui.theme.DiaryTheme
+import kotlinx.coroutines.launch
+import java.io.File
 import java.time.LocalDate
 
 /**
@@ -51,23 +59,82 @@ class MainActivity : ComponentActivity() {
         handlePermissionResult(isGranted)
     }
 
+
+    /**
+     * Launches the image picker and handles the result.
+     */
     private val imagePickerLauncher = registerForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == RESULT_OK) {
             val imageUri: Uri? = result.data?.data
             if (imageUri != null) {
-                viewModel.selectedEntry.value = viewModel.selectedEntry.value.copy(imageUri = imageUri.toString())
+                lifecycleScope.launch {
+                    cacheThumbnail(imageUri)
+                }
             }
         }
     }
 
+
+    /**
+     * Handles the result of the storage permission request.
+     * @param isGranted Whether the permission was granted.
+     */
     fun handlePermissionResult(isGranted: Boolean) {
         if (isGranted) {
             val intent = Intent(Intent.ACTION_PICK).apply {
                 type = "image/*"
             }
             imagePickerLauncher.launch(input = intent)
+        }
+    }
+
+
+    // Thumbnail saving and loading
+    var imageUpdated by mutableStateOf(value = false)
+
+
+    /**
+     * Caches the thumbnail of the selected image.
+     * @param uri The URI of the selected image.
+     */
+    private suspend fun cacheThumbnail(uri: Uri) {
+        val imageLoader = ImageLoader(context = application)
+        val request = ImageRequest.Builder(context = application)
+            .data(data = uri)
+            .size(size = 1080)
+            .build()
+        val result = imageLoader.execute(request)
+        val bitmap = (result as SuccessResult).drawable.toBitmap()
+
+        val file = File(application.cacheDir, "tmp_thumb_${viewModel.selectedEntry.value.id}.jpg")
+        file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 80, it) }
+
+        viewModel.selectedEntry.value = viewModel.selectedEntry.value.copy(
+            imagePath = file.absolutePath
+        )
+
+        imageUpdated = !imageUpdated
+    }
+
+
+    /**
+     * Saves the cached thumbnail to the app's files directory.
+     */
+    fun saveCachedThumbnail() {
+        lifecycleScope.launch {
+            val tempPath = viewModel.selectedEntry.value.imagePath
+            if (tempPath != null && tempPath.contains(other = "tmp_thumb")) {
+                val tempFile = File(tempPath)
+                val file = File(application.filesDir, "thumb_${viewModel.selectedEntry.value.id}.jpg")
+                tempFile.copyTo(target = file, overwrite = true)
+                tempFile.delete()
+
+                viewModel.selectedEntry.value = viewModel.selectedEntry.value.copy(
+                    imagePath = file.absolutePath
+                )
+            }
         }
     }
 
@@ -160,7 +227,7 @@ class MainActivity : ComponentActivity() {
 
             // Add image page, allows the user to add an image
             composable(route = "add_image") {
-                ImageBox(imageUri = viewModel.selectedEntry.value.imageUri)
+                ImageBox(imagePath = viewModel.selectedEntry.value.imagePath, imageUpdated = imageUpdated)
             }
 
             // View page, allows the user to view and edit an entry
@@ -184,7 +251,7 @@ class MainActivity : ComponentActivity() {
 
             // View image page, allows the user to view and swap an image
             composable(route = "view_image") {
-                ImageBox(imageUri = viewModel.selectedEntry.value.imageUri)
+                ImageBox(imagePath = viewModel.selectedEntry.value.imagePath, imageUpdated = imageUpdated)
             }
         }
     }
@@ -343,6 +410,7 @@ class MainActivity : ComponentActivity() {
                 contentDescription = "save",
                 width  = 72.dp,
                 onClick = {
+                    saveCachedThumbnail()
                     viewModel.insert(entry = viewModel.selectedEntry.value)
                     navController.navigate(route = "home") {
                         popUpTo(route = "home") { inclusive = false }
@@ -358,6 +426,7 @@ class MainActivity : ComponentActivity() {
                 contentDescription = "save",
                 width  = 72.dp,
                 onClick = {
+                    saveCachedThumbnail()
                     viewModel.update(entry = viewModel.selectedEntry.value)
                     navController.navigate(route = "home") {
                         popUpTo(route = "home") { inclusive = false }

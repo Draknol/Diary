@@ -37,6 +37,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -343,11 +344,13 @@ fun TextBox(
 
 /**
  * Displays and image (or message if no image is selected) on a card.
- * @param imageUri The URI of the image (`null` for no image).
+ * @param imagePath The path to the image (null if no image is selected).
+ * @param imageUpdated toggle when updating the image.
  */
 @Composable
 fun ImageBox(
-    imageUri: String?
+    imagePath: String?,
+    imageUpdated: Boolean
 ) {
     val bottomPadding = 80.dp
 
@@ -363,10 +366,10 @@ fun ImageBox(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            if (imageUri != null) {
-                val painter = rememberAsyncImagePainter(
-                    model = imageUri
-                )
+            if (imagePath != null) {
+                val painter = key(imageUpdated) {
+                    rememberAsyncImagePainter(model = imagePath)
+                }
 
                 Image(
                     painter = painter,
