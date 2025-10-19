@@ -203,7 +203,7 @@ class MainActivity : ComponentActivity() {
 
             // Routine page, set time for reminder
             composable(route = "routine") {
-                /* TODO */
+                TimeSetter(navController = navController, destination = "home")
             }
 
             // Add page, allows the user to add a new entry
@@ -254,18 +254,6 @@ class MainActivity : ComponentActivity() {
                 ImageBox(imagePath = viewModel.selectedEntry.value.imagePath, imageUpdated = imageUpdated)
             }
         }
-    }
-
-    @Composable
-    fun BitMapImage(
-        id: Int,
-        width: Float,
-        useAspect: Boolean,
-        viewModel: DiaryViewModel,
-        modifier: Modifier,
-        forceFullSize: Boolean
-    ) {
-        TODO("Not yet implemented")
     }
 
 

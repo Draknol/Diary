@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,8 +35,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
@@ -379,6 +382,60 @@ fun ImageBox(
                 )
             } else {
                 Text(text = "No image selected", color = Color.Gray)
+            }
+        }
+    }
+}
+
+
+/**
+ * Set the time for a reminder.
+ * @param navController The navigation controller.
+ * @param destination The destination to navigate to afterwards.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TimeSetter(navController: NavController, destination: String) {
+    // Needs replacing with something more permanent
+    var hour  = 0
+    var minute = 0
+
+    val timePickerState = rememberTimePickerState(initialHour = hour, initialMinute = minute)
+
+    Column (
+        verticalArrangement = Arrangement.SpaceEvenly,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        TimePicker(state = timePickerState)
+
+        Row (
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            Button(
+                onClick = {
+                    navController.navigate(route = destination) {
+                        popUpTo(route = destination) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+            ) {
+                Text(text = "cancel")
+            }
+
+            Button(
+                onClick = {
+                    // Save time
+                    hour = timePickerState.hour
+                    minute = timePickerState.minute
+
+                    navController.navigate(route = destination) {
+                        popUpTo(route = destination) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+            ) {
+                Text(text = "set")
             }
         }
     }
