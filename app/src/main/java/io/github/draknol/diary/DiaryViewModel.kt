@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import io.github.draknol.diary.DiaryDataBase.Companion.getDataBase
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -18,6 +20,8 @@ class DiaryViewModelFactory(val context: Context) : ViewModelProvider.Factory {
 }
 class DiaryViewModel(context: Context): ViewModel() {
     val mDao: DiaryDao
+    private val preferenceDataStore = PreferenceDataStore(context)
+
     init {
         val db = getDataBase(context = context)
         mDao = db.DiaryDao()
@@ -37,5 +41,16 @@ class DiaryViewModel(context: Context): ViewModel() {
         withContext(context = Dispatchers.IO) {
             mDao.update(entry = entry)
         }
+    }
+
+    val reminderTime = preferenceDataStore.getDetails()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = Time(hour = 0, minute = 0)
+        )
+
+    fun setReminderTime(time: Time) {
+        preferenceDataStore.setDetails(time)
     }
 }

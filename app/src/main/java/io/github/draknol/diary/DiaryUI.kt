@@ -395,12 +395,17 @@ fun ImageBox(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TimeSetter(navController: NavController, destination: String) {
-    // Needs replacing with something more permanent
-    var hour  = 0
-    var minute = 0
+fun TimeSetter(
+    initialTime: Time,
+    onSaveTime: (Time) -> Unit,
+    navController: NavController,
+    destination: String
+) {
 
-    val timePickerState = rememberTimePickerState(initialHour = hour, initialMinute = minute)
+    val timePickerState = rememberTimePickerState(
+        initialHour = initialTime.hour,
+        initialMinute = initialTime.minute
+    )
 
     Column (
         verticalArrangement = Arrangement.SpaceEvenly,
@@ -426,8 +431,7 @@ fun TimeSetter(navController: NavController, destination: String) {
             Button(
                 onClick = {
                     // Save time
-                    hour = timePickerState.hour
-                    minute = timePickerState.minute
+                    onSaveTime(Time(hour = timePickerState.hour, minute = timePickerState.minute))
 
                     navController.navigate(route = destination) {
                         popUpTo(route = destination) { inclusive = false }

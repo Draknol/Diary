@@ -203,7 +203,13 @@ class MainActivity : ComponentActivity() {
 
             // Routine page, set time for reminder
             composable(route = "routine") {
-                TimeSetter(navController = navController, destination = "home")
+                val timeState by viewModel.reminderTime.collectAsState()
+                TimeSetter(
+                    initialTime = timeState,
+                    onSaveTime = { viewModel.setReminderTime(it) },
+                    navController = navController,
+                    destination = "home"
+                )
             }
 
             // Add page, allows the user to add a new entry
