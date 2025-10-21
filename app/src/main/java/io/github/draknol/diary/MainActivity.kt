@@ -1,6 +1,8 @@
 package io.github.draknol.diary
 
 import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
@@ -20,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -28,7 +31,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationCompat
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavHostController
@@ -53,12 +58,17 @@ class MainActivity : ComponentActivity() {
     }
 
     // Storage permissions
-    private var hasPermission by mutableStateOf(value = false)
+    private var hasStoragePermission by mutableStateOf(value = false)
     private val storagePermissionLauncher = registerForActivityResult(contract = ActivityResultContracts.RequestPermission()) { isGranted ->
-        hasPermission = isGranted
+        hasStoragePermission = isGranted
         handlePermissionResult(isGranted)
     }
 
+    // Notification permissions
+    private var hasNotificationPermission by mutableStateOf(value = false)
+    private val notificationPermissionLauncher = registerForActivityResult(contract = ActivityResultContracts.RequestPermission()) { isGranted ->
+        hasNotificationPermission = isGranted
+    }
 
     /**
      * Launches the image picker and handles the result.
@@ -145,6 +155,11 @@ class MainActivity : ComponentActivity() {
      */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(input = Manifest.permission.POST_NOTIFICATIONS)
+        }
+
         enableEdgeToEdge()
         setContent {
             DiaryTheme {
@@ -206,7 +221,7 @@ class MainActivity : ComponentActivity() {
                 val timeState by viewModel.reminderTime.collectAsState()
                 TimeSetter(
                     initialTime = timeState,
-                    onSaveTime = { viewModel.setReminderTime(it) },
+                    onSaveTime = { time -> viewModel.setReminderTime(context = application, time = time) },
                     navController = navController,
                     destination = "home"
                 )
