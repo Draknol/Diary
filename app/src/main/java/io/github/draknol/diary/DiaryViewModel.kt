@@ -1,26 +1,12 @@
 package io.github.draknol.diary
 
-import android.Manifest
-import android.app.AlarmManager
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
-import android.os.Build
-import android.util.Log
-import androidx.annotation.RequiresPermission
 import androidx.compose.runtime.mutableStateOf
-import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat.getSystemService
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import androidx.work.Worker
-import androidx.work.WorkerParameters
 import io.github.draknol.diary.DiaryDataBase.Companion.getDataBase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -49,6 +35,8 @@ class DiaryViewModel(context: Context): ViewModel() {
 
     fun getAllDesc() = mDao.getAllDesc()
 
+    fun getEntry(id: Long) = mDao.getEntry(id = id)
+
     fun insert(entry: Entry) = viewModelScope.launch {
         withContext(context = Dispatchers.IO) {
             mDao.insert(entry = entry)
@@ -61,6 +49,12 @@ class DiaryViewModel(context: Context): ViewModel() {
         }
     }
 
+    fun delete(entry: Entry) = viewModelScope.launch {
+        withContext(context = Dispatchers.IO) {
+            mDao.delete(entry = entry)
+        }
+    }
+
     val reminderTime = preferenceDataStore.getDetails()
         .stateIn(
             scope = viewModelScope,
@@ -68,7 +62,6 @@ class DiaryViewModel(context: Context): ViewModel() {
             initialValue = Time(hour = 0, minute = 0)
         )
 
-    @RequiresPermission(Manifest.permission.SCHEDULE_EXACT_ALARM)
     fun setReminderTime(context: Context, time: Time) {
         preferenceDataStore.setDetails(time)
 
@@ -93,6 +86,7 @@ class DiaryViewModel(context: Context): ViewModel() {
             .setInitialDelay(delay, TimeUnit.MILLISECONDS)
             .addTag("reminder_${time.hour}_${time.minute}")
             .build()
+
         WorkManager.getInstance(context).enqueue(dailyReminderRequest)
     }
 }

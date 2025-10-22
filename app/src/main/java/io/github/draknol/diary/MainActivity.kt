@@ -1,10 +1,7 @@
 package io.github.draknol.diary
 
 import android.Manifest
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.content.Intent
-import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -23,45 +20,45 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.core.app.NotificationCompat
-import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import coil.ImageLoader
-import coil.request.ImageRequest
-import coil.request.SuccessResult
 import io.github.draknol.diary.ui.theme.DiaryTheme
 import kotlinx.coroutines.launch
-import java.io.File
 import java.time.LocalDate
 
 /**
  * @author Reuben Russell - 23004666
  */
 class MainActivity : ComponentActivity() {
+    // ViewModel for the app
     private val viewModel: DiaryViewModel by viewModels {
         DiaryViewModelFactory(context = application)
     }
+
+    // ImageManager for the app
+    private lateinit var imageManager: ImageManager
 
     // Storage permissions
     private var hasStoragePermission by mutableStateOf(value = false)
     private val storagePermissionLauncher = registerForActivityResult(contract = ActivityResultContracts.RequestPermission()) { isGranted ->
         hasStoragePermission = isGranted
-        handlePermissionResult(isGranted)
+        storagePermissionHandler(isGranted)
     }
 
     // Notification permissions
@@ -70,6 +67,23 @@ class MainActivity : ComponentActivity() {
         hasNotificationPermission = isGranted
     }
 
+
+    /**
+     * Handles the result of the storage permission request.
+     * @param isGranted Whether the permission was granted.
+     */
+    fun storagePermissionHandler(isGranted: Boolean) {
+        if (isGranted) {
+            // Launch activity for result
+            imagePickerLauncher.launch(
+                input = Intent(Intent.ACTION_PICK).apply {
+                    type = "image/*"
+                }
+            )
+        }
+    }
+
+
     /**
      * Launches the image picker and handles the result.
      */
@@ -77,73 +91,8 @@ class MainActivity : ComponentActivity() {
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == RESULT_OK) {
-            val imageUri: Uri? = result.data?.data
-            if (imageUri != null) {
-                lifecycleScope.launch {
-                    cacheThumbnail(imageUri)
-                }
-            }
-        }
-    }
-
-
-    /**
-     * Handles the result of the storage permission request.
-     * @param isGranted Whether the permission was granted.
-     */
-    fun handlePermissionResult(isGranted: Boolean) {
-        if (isGranted) {
-            val intent = Intent(Intent.ACTION_PICK).apply {
-                type = "image/*"
-            }
-            imagePickerLauncher.launch(input = intent)
-        }
-    }
-
-
-    // Thumbnail saving and loading
-    var imageUpdated by mutableStateOf(value = false)
-
-
-    /**
-     * Caches the thumbnail of the selected image.
-     * @param uri The URI of the selected image.
-     */
-    private suspend fun cacheThumbnail(uri: Uri) {
-        val imageLoader = ImageLoader(context = application)
-        val request = ImageRequest.Builder(context = application)
-            .data(data = uri)
-            .size(size = 1080)
-            .build()
-        val result = imageLoader.execute(request)
-        val bitmap = (result as SuccessResult).drawable.toBitmap()
-
-        val file = File(application.cacheDir, "tmp_thumb_${viewModel.selectedEntry.value.id}.jpg")
-        file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 80, it) }
-
-        viewModel.selectedEntry.value = viewModel.selectedEntry.value.copy(
-            imagePath = file.absolutePath
-        )
-
-        imageUpdated = !imageUpdated
-    }
-
-
-    /**
-     * Saves the cached thumbnail to the app's files directory.
-     */
-    fun saveCachedThumbnail() {
-        lifecycleScope.launch {
-            val tempPath = viewModel.selectedEntry.value.imagePath
-            if (tempPath != null && tempPath.contains(other = "tmp_thumb")) {
-                val tempFile = File(tempPath)
-                val file = File(application.filesDir, "thumb_${viewModel.selectedEntry.value.id}.jpg")
-                tempFile.copyTo(target = file, overwrite = true)
-                tempFile.delete()
-
-                viewModel.selectedEntry.value = viewModel.selectedEntry.value.copy(
-                    imagePath = file.absolutePath
-                )
+            result.data?.data?.let { imageUri ->
+                lifecycleScope.launch { imageManager.cacheThumbnail(imageUri) }
             }
         }
     }
@@ -159,6 +108,8 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             notificationPermissionLauncher.launch(input = Manifest.permission.POST_NOTIFICATIONS)
         }
+
+        imageManager = ImageManager(context = application, viewModel = viewModel)
 
         enableEdgeToEdge()
         setContent {
@@ -181,7 +132,6 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
 
     /**
      * Navigation host for the app.
@@ -221,7 +171,9 @@ class MainActivity : ComponentActivity() {
                 val timeState by viewModel.reminderTime.collectAsState()
                 TimeSetter(
                     initialTime = timeState,
-                    onSaveTime = { time -> viewModel.setReminderTime(context = application, time = time) },
+                    onSaveTime = {
+                        time -> viewModel.setReminderTime(context = application, time = time)
+                    },
                     navController = navController,
                     destination = "home"
                 )
@@ -232,14 +184,18 @@ class MainActivity : ComponentActivity() {
                 Column (modifier = Modifier.padding(all = 8.dp)) {
                     TextBox(
                         text = viewModel.selectedEntry.value.title,
-                        onValueChange = { viewModel.selectedEntry.value = viewModel.selectedEntry.value.copy(title = it) },
+                        onValueChange = {
+                            viewModel.selectedEntry.value = viewModel.selectedEntry.value.copy(title = it)
+                        },
                         placeholder = "Title",
                         singleLine = true
                     )
 
                     TextBox(
                         text = viewModel.selectedEntry.value.content,
-                        onValueChange = { viewModel.selectedEntry.value = viewModel.selectedEntry.value.copy(content = it) },
+                        onValueChange = {
+                            viewModel.selectedEntry.value = viewModel.selectedEntry.value.copy(content = it)
+                        },
                         placeholder = "dear diary...",
                         singleLine = false
                     )
@@ -248,7 +204,18 @@ class MainActivity : ComponentActivity() {
 
             // Add image page, allows the user to add an image
             composable(route = "add_image") {
-                ImageBox(imagePath = viewModel.selectedEntry.value.imagePath, imageUpdated = imageUpdated)
+                ImageBox(
+                    imagePath = viewModel.selectedEntry.value.imagePath,
+                    imageUpdated = imageManager.imageUpdated,
+                    onClick = {
+                        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            Manifest.permission.READ_MEDIA_IMAGES
+                        } else {
+                            Manifest.permission.READ_EXTERNAL_STORAGE
+                        }
+                        storagePermissionLauncher.launch(input = permission)
+                    }
+                )
             }
 
             // View page, allows the user to view and edit an entry
@@ -256,14 +223,18 @@ class MainActivity : ComponentActivity() {
                 Column (modifier = Modifier.padding(all = 8.dp)) {
                     TextBox(
                         text = viewModel.selectedEntry.value.title,
-                        onValueChange = { viewModel.selectedEntry.value = viewModel.selectedEntry.value.copy(title = it) },
+                        onValueChange = {
+                            viewModel.selectedEntry.value = viewModel.selectedEntry.value.copy(title = it)
+                        },
                         placeholder = "Title",
                         singleLine = true
                     )
 
                     TextBox(
                         text = viewModel.selectedEntry.value.content,
-                        onValueChange = { viewModel.selectedEntry.value = viewModel.selectedEntry.value.copy(content = it) },
+                        onValueChange = {
+                            viewModel.selectedEntry.value = viewModel.selectedEntry.value.copy(content = it)
+                        },
                         placeholder = "dear diary...",
                         singleLine = false
                     )
@@ -272,8 +243,31 @@ class MainActivity : ComponentActivity() {
 
             // View image page, allows the user to view and swap an image
             composable(route = "view_image") {
-                ImageBox(imagePath = viewModel.selectedEntry.value.imagePath, imageUpdated = imageUpdated)
+                ImageBox(
+                    imagePath = viewModel.selectedEntry.value.imagePath,
+                    imageUpdated = imageManager.imageUpdated,
+                    onClick = {
+                        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            Manifest.permission.READ_MEDIA_IMAGES
+                        } else {
+                            Manifest.permission.READ_EXTERNAL_STORAGE
+                        }
+                        storagePermissionLauncher.launch(input = permission)
+                    }
+                )
             }
+        }
+    }
+
+
+    /**
+     * Navigates to the home page.
+     * @param navController The navigation controller.
+     */
+    fun navigateHome(navController: NavHostController) {
+        navController.navigate(route = "home") {
+            popUpTo(route = "home") { inclusive = false }
+            launchSingleTop = true
         }
     }
 
@@ -295,6 +289,8 @@ class MainActivity : ComponentActivity() {
                 id = R.drawable.ic_launcher_foreground,
                 contentDescription = "logo"
             )
+
+            // Topbar with title
             "routine" -> TitleBar(
                 title = "Reminders",
                 id = R.drawable.ic_launcher_foreground,
@@ -306,34 +302,143 @@ class MainActivity : ComponentActivity() {
                 title = "New Entry",
                 id = R.drawable.back,
                 contentDescription = "back",
-                onClick = {
-                    navController.navigate(route = "home") {
-                        popUpTo(route = "home") { inclusive = false }
-                        launchSingleTop = true
-                    }
-                }
-            )
-            "add_image" -> TitleBar(
-                title = "Add Image",
-                id = R.drawable.back,
-                contentDescription = "back",
-                onClick = {
-                    navController.navigate(route = "home") {
-                        popUpTo(route = "home") { inclusive = false }
-                        launchSingleTop = true
+                onClick = { navigateHome(navController) },
+                actions = {
+                    var showMenu by remember { mutableStateOf(value = false) }
+                    IconButton(
+                        onClick = {
+                            showMenu = !showMenu
+                        }
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu),
+                            contentDescription = "menu"
+                        )
+                        EntryMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            imagePath = viewModel.selectedEntry.value.imagePath,
+                            onDeleteClicked = {
+                                navigateHome(navController)
+                                lifecycleScope.launch {
+                                    imageManager.deleteCachedThumbnail()
+                                }
+                                viewModel.delete(entry = viewModel.selectedEntry.value)
+                            }
+                        )
                     }
                 }
             )
 
-            // Topbar with date and back button
-            "view", "view_image" -> TitleBar(
+            // Topbar with title and back button
+            "add_image" -> TitleBar(
+                title = "Add Image",
+                id = R.drawable.back,
+                contentDescription = "back",
+                onClick = { navigateHome(navController) },
+                actions = {
+                    var showMenu by remember { mutableStateOf(value = false) }
+                    IconButton(
+                        onClick = {
+                            showMenu = !showMenu
+                        }
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu),
+                            contentDescription = "menu"
+                        )
+                        EntryMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            hasImage = true,
+                            imagePath = viewModel.selectedEntry.value.imagePath,
+                            onDeleteClicked = {
+                                navigateHome(navController)
+                                lifecycleScope.launch {
+                                    imageManager.deleteCachedThumbnail()
+                                }
+                                viewModel.delete(entry = viewModel.selectedEntry.value)
+                            },
+                            onDetachClicked = {
+                                lifecycleScope.launch {
+                                    imageManager.deleteCachedThumbnail()
+                                }
+                                showMenu = false
+                            }
+                        )
+                    }
+                }
+            )
+
+            // Topbar with date and back button and menu button
+            "view" -> TitleBar(
                 title = viewModel.selectedEntry.value.date,
                 id = R.drawable.back,
                 contentDescription = "back",
-                onClick = {
-                    navController.navigate(route = "home") {
-                        popUpTo(route = "home") { inclusive = false }
-                        launchSingleTop = true
+                onClick = { navigateHome(navController) },
+                actions = {
+                    var showMenu by remember { mutableStateOf(value = false) }
+                    IconButton(
+                        onClick = {
+                            showMenu = !showMenu
+                        }
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu),
+                            contentDescription = "menu"
+                        )
+                        EntryMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            imagePath = viewModel.selectedEntry.value.imagePath,
+                            onDeleteClicked = {
+                                navigateHome(navController)
+                                lifecycleScope.launch {
+                                    imageManager.deleteCachedThumbnail()
+                                }
+                                viewModel.delete(entry = viewModel.selectedEntry.value)
+                            }
+                        )
+                    }
+                }
+            )
+
+            // Topbar with date, back button and menu button
+            "view_image" -> TitleBar(
+                title = viewModel.selectedEntry.value.date,
+                id = R.drawable.back,
+                contentDescription = "back",
+                onClick = { navigateHome(navController) },
+                actions = {
+                    var showMenu by remember { mutableStateOf(value = false) }
+                    IconButton(
+                        onClick = {
+                            showMenu = !showMenu
+                        }
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu),
+                            contentDescription = "menu"
+                        )
+                        EntryMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            hasImage = true,
+                            imagePath = viewModel.selectedEntry.value.imagePath,
+                            onDeleteClicked = {
+                                navigateHome(navController)
+                                lifecycleScope.launch {
+                                    imageManager.deleteCachedThumbnail()
+                                }
+                                viewModel.delete(entry = viewModel.selectedEntry.value)
+                            },
+                            onDetachClicked = {
+                                lifecycleScope.launch {
+                                    imageManager.deleteCachedThumbnail()
+                                }
+                                showMenu = false
+                            }
+                        )
                     }
                 }
             )
@@ -347,7 +452,10 @@ class MainActivity : ComponentActivity() {
      * @param currentRoute The current route.
      */
     @Composable
-    fun bottomBar(navController: NavHostController, currentRoute: String?): @Composable () -> Unit = {
+    fun bottomBar(
+        navController: NavHostController,
+        currentRoute: String?
+    ): @Composable () -> Unit = {
         when (currentRoute) {
             "home" -> TabBar(
                 navController = navController, currentPage = 0,
@@ -399,7 +507,6 @@ class MainActivity : ComponentActivity() {
                 text = "Add",
                 id = R.drawable.add,
                 contentDescription = "add",
-                width  = 72.dp,
                 onClick = {
                     viewModel.selectedEntry.value = Entry(
                         title = "",
@@ -412,51 +519,26 @@ class MainActivity : ComponentActivity() {
                 }
             )
 
-            // Floating action button for saving new entry
-            "add" -> ActionButton(
+            // Floating action button for saving an entry
+            "add", "add_image", "view", "view_image" -> ActionButton(
                 text = "Save",
                 id = R.drawable.save,
                 contentDescription = "save",
-                width  = 72.dp,
                 onClick = {
-                    saveCachedThumbnail()
-                    viewModel.insert(entry = viewModel.selectedEntry.value)
-                    navController.navigate(route = "home") {
-                        popUpTo(route = "home") { inclusive = false }
-                        launchSingleTop = true
+                    // Save cached thumbnail to files directory
+                    lifecycleScope.launch {
+                        imageManager.saveCachedThumbnail()
                     }
-                }
-            )
 
-            // Floating action button for saving edited entry
-            "view" -> ActionButton(
-                text = "Save",
-                id = R.drawable.save,
-                contentDescription = "save",
-                width  = 72.dp,
-                onClick = {
-                    saveCachedThumbnail()
-                    viewModel.update(entry = viewModel.selectedEntry.value)
-                    navController.navigate(route = "home") {
-                        popUpTo(route = "home") { inclusive = false }
-                        launchSingleTop = true
-                    }
-                }
-            )
-
-            // Floating action button for adding an image
-            "add_image", "view_image" -> ActionButton(
-                text = "Attach",
-                id = R.drawable.attach,
-                contentDescription = "attach",
-                width = 90.dp,
-                onClick = {
-                    val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        Manifest.permission.READ_MEDIA_IMAGES
+                    // Insert / Update entry based on currentRoute
+                    if (currentRoute.startsWith(prefix = "add")) {
+                        viewModel.insert(entry = viewModel.selectedEntry.value)
                     } else {
-                        Manifest.permission.READ_EXTERNAL_STORAGE
+                        viewModel.update(entry = viewModel.selectedEntry.value)
                     }
-                    storagePermissionLauncher.launch(input = permission)
+
+                    // Navigate back to home
+                    navigateHome(navController)
                 }
             )
         }

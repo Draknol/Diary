@@ -3,6 +3,7 @@ package io.github.draknol.diary
 import android.content.Context
 import androidx.room.Dao
 import androidx.room.Database
+import androidx.room.Delete
 import androidx.room.Entity
 import androidx.room.Insert
 import androidx.room.PrimaryKey
@@ -33,11 +34,17 @@ interface DiaryDao {
     @Query(value = "SELECT * FROM Entry ORDER BY id DESC")
     fun getAllDesc(): Flow<List<Entry>>
 
+    @Query(value = "SELECT * FROM Entry WHERE id = :id")
+    fun getEntry(id: Long): Flow<Entry?>
+
     @Insert
     fun insert(entry: Entry): Long
 
     @Update
     fun update(entry: Entry)
+
+    @Delete
+    fun delete(entry: Entry)
 }
 
 @Database(entities = [Entry::class], version = 3)

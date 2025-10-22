@@ -2,10 +2,12 @@ package io.github.draknol.diary
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +27,8 @@ import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -48,7 +52,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
@@ -62,10 +65,17 @@ import coil.compose.rememberAsyncImagePainter
  * @param id The resource ID of the navigationIcon.
  * @param contentDescription The description of the navigationIcon.
  * @param onClick The action to be performed when the navigationIcon is clicked.
+ * @param actions IconButton to optionally show on the right.
  */
 @OptIn(markerClass = [ExperimentalMaterial3Api::class])
 @Composable
-fun TitleBar(title: String, id: Int, contentDescription: String, onClick: () -> Unit) {
+fun TitleBar(
+    title: String,
+    id: Int,
+    contentDescription: String,
+    onClick: () -> Unit,
+    actions: @Composable (RowScope.() -> Unit) = {}
+) {
     TopAppBar(
         title = {
             Text(
@@ -82,6 +92,7 @@ fun TitleBar(title: String, id: Int, contentDescription: String, onClick: () -> 
                 )
             }
         },
+        actions = actions,
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -98,7 +109,11 @@ fun TitleBar(title: String, id: Int, contentDescription: String, onClick: () -> 
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TitleBar(title: String, id: Int, contentDescription: String) {
+fun TitleBar(
+    title: String,
+    id: Int,
+    contentDescription: String
+) {
     TopAppBar(
         title = {
             Text(
@@ -114,6 +129,9 @@ fun TitleBar(title: String, id: Int, contentDescription: String) {
                 tint = Color(color = 0xFF0072eb)
             )
         },
+        actions = {
+
+        },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -127,11 +145,15 @@ fun TitleBar(title: String, id: Int, contentDescription: String) {
  * @param text The text to display on the button.
  * @param id The resource ID of the icon.
  * @param contentDescription The description of the icon.
- * @param width The width of the button.
  * @param onClick The action to be performed when the button is clicked.
  */
 @Composable
-fun ActionButton(text: String, id: Int, contentDescription: String, width: Dp, onClick: () -> Unit) {
+fun ActionButton(
+    text: String,
+    id: Int,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
     ExtendedFloatingActionButton(
         onClick = onClick,
         shape = RoundedCornerShape(size = 24.dp),
@@ -139,7 +161,7 @@ fun ActionButton(text: String, id: Int, contentDescription: String, width: Dp, o
         elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp)
     ) {
         Row (
-            modifier = Modifier.width(width = width),
+            modifier = Modifier.width(width = 72.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -235,7 +257,12 @@ fun TabBar(
  * @param onClick The action to be performed when the tab is clicked.
  */
 @Composable
-fun TabIconToggleButton(id: Int, contentDescription: String, checked: Boolean, onClick: () -> Unit) {
+fun TabIconToggleButton(
+    id: Int,
+    contentDescription: String,
+    checked: Boolean,
+    onClick: () -> Unit
+) {
     Surface(
         modifier = Modifier.size(width = 64.dp, height = 32.dp),
         shape = RoundedCornerShape(size = 24.dp),
@@ -260,7 +287,11 @@ fun TabIconToggleButton(id: Int, contentDescription: String, checked: Boolean, o
  * @param onClick The action to be performed when an entry is clicked.
  */
 @Composable
-fun EntryList(state: LazyGridState, entries: List<Entry>, onClick: (id: Long) -> Unit) {
+fun EntryList(
+    state: LazyGridState,
+    entries: List<Entry>,
+    onClick: (id: Long) -> Unit
+) {
     LazyVerticalGrid(
         modifier = Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer),
         columns = GridCells.Fixed(count = 1),
@@ -279,7 +310,10 @@ fun EntryList(state: LazyGridState, entries: List<Entry>, onClick: (id: Long) ->
  * @param onClick The action to be performed when the entry is clicked.
  */
 @Composable
-fun Entry(entry: Entry, onClick: (id: Long) -> Unit) {
+fun Entry(
+    entry: Entry,
+    onClick: (id: Long) -> Unit
+) {
     Surface (
         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
         color = MaterialTheme.colorScheme.background,
@@ -349,18 +383,21 @@ fun TextBox(
  * Displays and image (or message if no image is selected) on a card.
  * @param imagePath The path to the image (null if no image is selected).
  * @param imageUpdated toggle when updating the image.
+ * @param onClick The action to be performed when an image should be attached.
  */
 @Composable
 fun ImageBox(
     imagePath: String?,
-    imageUpdated: Boolean
+    imageUpdated: Boolean,
+    onClick: () -> Unit
 ) {
     val bottomPadding = 80.dp
 
     Card(
         modifier = Modifier
             .padding(all = 8.dp)
-            .padding(bottom = bottomPadding),
+            .padding(bottom = bottomPadding)
+            .clickable(enabled = imagePath == null, onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.background
         )
@@ -381,7 +418,7 @@ fun ImageBox(
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
-                Text(text = "No image selected", color = Color.Gray)
+                Text(text = "Click to attack an image", color = Color.Gray)
             }
         }
     }
@@ -441,6 +478,52 @@ fun TimeSetter(
             ) {
                 Text(text = "set")
             }
+        }
+    }
+}
+
+
+/**
+ * Dropdown menu for entry options.
+ * @param expanded Whether the menu is expanded.
+ * @param onDismissRequest The action to be performed when the menu is dismissed.
+ * @param hasImage Whether the detach option should be shown.
+ * @param imagePath The path to the image (not used if hasImage = false).
+ * @param onDeleteClicked The action to be performed when the delete option is clicked.
+ * @param onDetachClicked The action to be performed when the detach option is clicked.
+ */
+@Composable
+fun EntryMenu(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    hasImage: Boolean = false,
+    imagePath: String? = null,
+    onDeleteClicked: () -> Unit,
+    onDetachClicked: () -> Unit = {},
+
+) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest
+    ) {
+        DropdownMenuItem(
+            leadingIcon = { Icon(
+                painter = painterResource(id = R.drawable.delete),
+                contentDescription = "delete"
+            ) },
+            text = { Text(text = "Delete Entry") },
+            onClick = onDeleteClicked
+        )
+        if (hasImage) {
+            DropdownMenuItem(
+                enabled = imagePath != null,
+                leadingIcon = { Icon(
+                    painter = painterResource(id = R.drawable.detach),
+                    contentDescription = "detach"
+                ) },
+                text = { Text(text = "Detach Image") },
+                onClick = onDetachClicked
+            )
         }
     }
 }
