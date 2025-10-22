@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import io.github.draknol.diary.DiaryDataBase.Companion.getDataBase
@@ -84,9 +85,13 @@ class DiaryViewModel(context: Context): ViewModel() {
             24, TimeUnit.HOURS
         )
             .setInitialDelay(delay, TimeUnit.MILLISECONDS)
-            .addTag("reminder_${time.hour}_${time.minute}")
+            .addTag("reminder")
             .build()
 
-        WorkManager.getInstance(context).enqueue(dailyReminderRequest)
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            uniqueWorkName = "reminder",
+            existingPeriodicWorkPolicy = ExistingPeriodicWorkPolicy.REPLACE,
+            request = dailyReminderRequest
+        )
     }
 }

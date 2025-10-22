@@ -30,7 +30,7 @@ class ReminderWorker(
         val channel = NotificationChannel(
             "reminder",
             "Reminder",
-            NotificationManager.IMPORTANCE_DEFAULT
+            NotificationManager.IMPORTANCE_HIGH
         )
         notificationManager.createNotificationChannel(channel)
 
