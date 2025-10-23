@@ -281,6 +281,13 @@ class MainActivity : ComponentActivity() {
         navController: NavHostController,
         currentRoute: String?
     ): @Composable () -> Unit = {
+
+        // Only warn if the entry has changed or is new and non-empty
+        val currentEntry = viewModel.selectedEntry.value
+        val originalEntry = viewModel.getEntry(id = currentEntry.id).collectAsState(initial = null).value
+        val emptyEntry = currentEntry.copy(title = "", content = "", imagePath = null)
+        val shouldWarn = currentEntry != (originalEntry ?: emptyEntry)
+
         when (currentRoute) {
             // Topbar with title
             "home" -> TitleBar(
@@ -301,7 +308,9 @@ class MainActivity : ComponentActivity() {
                 title = "New Entry",
                 id = R.drawable.back,
                 contentDescription = "back",
-                onClick = { navigateHome(navController) },
+                onConfirm = { navigateHome(navController) },
+                shouldWarn = shouldWarn,
+                warningText = "Any unsaved changes will be lost.",
                 actions = {
                     var showMenu by remember { mutableStateOf(value = false) }
                     IconButton(
@@ -334,7 +343,9 @@ class MainActivity : ComponentActivity() {
                 title = "Add Image",
                 id = R.drawable.back,
                 contentDescription = "back",
-                onClick = { navigateHome(navController) },
+                onConfirm = { navigateHome(navController) },
+                shouldWarn = shouldWarn,
+                warningText = "Any unsaved changes will be lost.",
                 actions = {
                     var showMenu by remember { mutableStateOf(value = false) }
                     IconButton(
@@ -374,7 +385,9 @@ class MainActivity : ComponentActivity() {
                 title = viewModel.selectedEntry.value.date,
                 id = R.drawable.back,
                 contentDescription = "back",
-                onClick = { navigateHome(navController) },
+                onConfirm = { navigateHome(navController) },
+                shouldWarn = shouldWarn,
+                warningText = "Any unsaved changes will be lost.",
                 actions = {
                     var showMenu by remember { mutableStateOf(value = false) }
                     IconButton(
@@ -407,7 +420,9 @@ class MainActivity : ComponentActivity() {
                 title = viewModel.selectedEntry.value.date,
                 id = R.drawable.back,
                 contentDescription = "back",
-                onClick = { navigateHome(navController) },
+                onConfirm = { navigateHome(navController) },
+                shouldWarn = shouldWarn,
+                warningText = "Any unsaved changes will be lost.",
                 actions = {
                     var showMenu by remember { mutableStateOf(value = false) }
                     IconButton(

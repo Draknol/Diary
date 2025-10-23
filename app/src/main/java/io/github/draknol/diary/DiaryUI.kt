@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -37,6 +38,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TimePicker
@@ -44,7 +46,11 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -64,7 +70,9 @@ import coil.compose.rememberAsyncImagePainter
  * @param title The title of the page.
  * @param id The resource ID of the navigationIcon.
  * @param contentDescription The description of the navigationIcon.
- * @param onClick The action to be performed when the navigationIcon is clicked.
+ * @param onConfirm The action to be performed when the navigationIcon is clicked.
+ * @param shouldWarn Whether a warning should be displayed.
+ * @param warningText The text to display in the warning dialog.
  * @param actions IconButton to optionally show on the right.
  */
 @OptIn(markerClass = [ExperimentalMaterial3Api::class])
@@ -73,9 +81,13 @@ fun TitleBar(
     title: String,
     id: Int,
     contentDescription: String,
-    onClick: () -> Unit,
+    onConfirm: () -> Unit,
+    shouldWarn: Boolean,
+    warningText: String,
     actions: @Composable (RowScope.() -> Unit) = {}
 ) {
+    var showMenu by remember { mutableStateOf(value = false) }
+
     TopAppBar(
         title = {
             Text(
@@ -84,7 +96,10 @@ fun TitleBar(
             )
         },
         navigationIcon = {
-            IconButton(onClick) {
+            IconButton(onClick = {
+                if (shouldWarn) showMenu = true
+                else onConfirm()
+            }) {
                 Icon(
                     painter = painterResource(id),
                     contentDescription = contentDescription,
@@ -97,6 +112,13 @@ fun TitleBar(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         )
+    )
+
+    WarningDialog(
+        showMenu = showMenu,
+        onDismissRequest = { showMenu = false },
+        onConfirm = onConfirm,
+        warningText = warningText
     )
 }
 
@@ -502,18 +524,25 @@ fun EntryMenu(
     onDetachClicked: () -> Unit = {},
 
 ) {
+    var showDeleteMenu by remember { mutableStateOf(value = false) }
+    var showDetachMenu by remember { mutableStateOf(value = false) }
+
+    // Dropdown menu
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest
     ) {
+        // Delete option
         DropdownMenuItem(
             leadingIcon = { Icon(
                 painter = painterResource(id = R.drawable.delete),
                 contentDescription = "delete"
             ) },
             text = { Text(text = "Delete Entry") },
-            onClick = onDeleteClicked
+            onClick = { showDeleteMenu = true }
         )
+
+        // Detach option
         if (hasImage) {
             DropdownMenuItem(
                 enabled = imagePath != null,
@@ -522,8 +551,69 @@ fun EntryMenu(
                     contentDescription = "detach"
                 ) },
                 text = { Text(text = "Detach Image") },
-                onClick = onDetachClicked
+                onClick = { showDetachMenu = true }
             )
         }
+    }
+
+    // Delete confirmation
+    WarningDialog(
+        showMenu = showDeleteMenu,
+        onDismissRequest = { showDeleteMenu = false; onDismissRequest() },
+        onConfirm = onDeleteClicked,
+        warningText = "Are you sure you want to delete this entry?"
+    )
+
+    // Detach confirmation
+    WarningDialog(
+        showMenu = showDetachMenu,
+        onDismissRequest = { showDetachMenu = false; onDismissRequest() },
+        onConfirm = onDetachClicked,
+        warningText = "This will permanently delete the apps copy of the image and can't be undone."
+    )
+}
+
+
+/**
+ *
+ */
+@Composable
+fun WarningDialog(
+    showMenu: Boolean,
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit,
+    warningText: String
+) {
+    if (showMenu) {
+        AlertDialog(
+            onDismissRequest = onDismissRequest,
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onConfirm()
+                        onDismissRequest()
+                    }
+                ) {
+                    Text(text = "Confirm")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = onDismissRequest
+                ) {
+                    Text(text = "Cancel")
+                }
+            },
+            title = {
+                Text(
+                    text = "Warning"
+                )
+            },
+            text = {
+                Text(
+                    text = warningText
+                )
+            }
+        )
     }
 }
